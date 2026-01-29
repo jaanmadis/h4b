@@ -1,0 +1,105 @@
+propaganda space race to reach visitor asteroid
+player's side is losing, the other guys are sending 2 man mission and are ahead, you are 1 man mission and hope to win.
+seems like the other side mission crashed / lost contact
+you land.
+you only have an hour or so, the asteroid is miving away rapidly and you won't be able to get back if you linger.
+ship acts as radio relay
+
+new orders: don't investigate crash, if there are survivors, then you can't mount a rescue mission anyway
+new orders: you place one of your science equipment
+return to ship for the second equipment, and find an astronaut standing next to your ship
+as you approach, the astronaut collapses
+looks like the astrnaut is dead ( or the suit was empty? creepy empty suit walking around for some reason? why? )
+new orders: investigate crash site of the other mission
+you find their ship intact, didn't crash.
+you find an empty helmet? no other bodies.
+
+new orders: resume placing your science equipment
+find a tunnel on your way there
+new orders:  investigate tunnel
+you find an artificial door, closed.
+new orders: retrieve some kind of explosive from your ship to blow the door open (do spaceships have explosives?)
+you return with explosive and find the door to be open
+you enter and fond the other dead astronaut in some alien contrapition
+there is an artificial structure beyond the door.
+no signal.
+get back outside to report.
+get out, no contact with ship.
+you approach ship find alien being messing about with your ship.
+
+ending option A: attack with explosive to kill the alien, player sacrifices themselves. left with unknwns if this even worked
+ending option B: sneak to the creature (while sun is up?), attach explosive to ship, damaging it and gtfo, then try to reach other ship and leave in a clutch as the creature is chasing you? heroic excape.
+ending option C: you approiach and make contact, creature does some trippy wierd shit to you, your get 2001 space odessy type of trip and the end. player left with questions. was this a good idea to leave two ships to the alien?
+ending option D: fuck off and try to get back home using other ship, leaving creature with your ship. coward's ending?
+
+
+
+
+would be cool, if the alien is dormant in the sun and becomes active in the dark. need to telegraph this somehow. the asteroid is rotating, so sun comes and goes.
+footprints -- should the game leave footprints when you walk and these prints don't ever go away? is this super overhead for Unity? can use footprints as some storytelling mechanism too.
+
+---
+
+2017
+
+
+1I/ʻOumuamua 
+
+
+first confirmed interstellar object detected passing through the Solar System.
+
+
+The first time an interstellar object was detected passing through the solar system was In 2017
+
+
+In 2017 1I/ʻOumuamua was discovered.
+The first interstellar object ever detected passing through our solar system.
+It came from the dark.
+It will never return.
+
+
+
+
+
+
+
+
+Now, another object has been found.
+Every space agency on Earth is racing to be the first to put a human on it.
+We are not winning.
+
+
+A new interstellar object has been discovered
+--
+https://freesound.org/
+https://getsoundly.com/
+https://polyhaven.com/a/namaqualand_boulder_02
+AmbientCG
+Sketchfab~~
+Unity Asset Store (Free)
+
+Soundly
+FreeSound CC0 / CC-BY
+OpenGameArt
+Kenney Audio
+
+itch.io (audio assets)
+
+skybox credit
+font credit
+
+
+Sodaphonic (Web App)
+Audacity
+Cakewalk
+
+
+
+-----------
+
+Distance: 1.5 million km from Earth ~4x distance to moon? show this too...
+Mission: Single astronaut sent to it for a propaganda/military/social clout reason
+Trajectory: Straight shot with Apollo-style rocket → coasting most of the way
+Time: ~9 days each way
+Return: Less fuel needed since asteroid has negligible gravity
+Communication lag: ~5 seconds one way
