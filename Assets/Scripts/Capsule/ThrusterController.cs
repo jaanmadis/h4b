@@ -1,18 +1,17 @@
 using TMPro;
 using UnityEngine;
-using UnityEngine.Android;
 
 public class ThrusterController : MonoBehaviour
 {
+    [SerializeField] AudioSource sound;
     [SerializeField] ParticleSystem exhaust;
     [SerializeField] TextMeshProUGUI text;
 
     public bool IsFiring => exhaust.emission.enabled;
+    public bool IsFlagged { get; set; } = false;
 
-    private const float BURN_FORCE = 25f;
-    private const float NORMAL_FORCE = 10f;
-    private const float BURN_SUSTAIN = 20f;
-    private const float NORMAL_SUSTAIN = 7f;
+    private const float BURN_FORCE = 300f;
+    private const float TURN_FORCE = 100f;
     private const float BURN_RATE_OVER_TIME = 115f;
     private const float NORMAL_RATE_OVER_TIME = 15f;
     private bool isReady = false;
@@ -25,9 +24,7 @@ public class ThrusterController : MonoBehaviour
             emission.enabled = false;
             exhaust.Stop();
         }
-        text.text = "Offline";
-        text.color = Color.gray;
-        isReady = false;
+        Offline();
     }
 
     public void Fire(Rigidbody rb, bool burn)
@@ -45,8 +42,9 @@ public class ThrusterController : MonoBehaviour
 
     public void FireCosmetic(bool burn)
     {
-        if (exhaust && !exhaust.emission.enabled && isReady)
+        if (isReady && !IsFiring)
         {
+            sound.Play();
             exhaust.Play();
             var emission = exhaust.emission;
             emission.enabled = true;
@@ -54,6 +52,13 @@ public class ThrusterController : MonoBehaviour
             text.text = "Active";
             text.color = Color.green;
         }
+    }
+
+    public void Offline()
+    {
+        text.text = "Offline";
+        text.color = Color.gray;
+        isReady = false;
     }
 
     public void Ready()
@@ -65,6 +70,7 @@ public class ThrusterController : MonoBehaviour
 
     public void Standby()
     {
+        Stop();
         text.text = "Standby";
         text.color = Color.yellow;
         isReady = false;
@@ -72,34 +78,18 @@ public class ThrusterController : MonoBehaviour
 
     public void Stop()
     {
-        if (exhaust && exhaust.emission.enabled)
+        IsFlagged = false;
+        if (IsFiring)
         {
+            sound.Stop();
             var emission = exhaust.emission;
             emission.enabled = false;
             Ready();
         }
     }
 
-    public void Sustain(Rigidbody rb, bool burn)
-    {
-        if (isReady)
-        {
-            rb.AddForceAtPosition(
-                -1 * GetSustain(burn) * transform.forward,
-                transform.position,
-                ForceMode.Force
-            );
-            FireCosmetic(burn);
-        }
-    }
-
     private float GetForce(bool burn)
     { 
-        return burn ? BURN_FORCE : NORMAL_FORCE;
-    }
-
-    private float GetSustain(bool burn)
-    {
-        return burn ? BURN_SUSTAIN : NORMAL_SUSTAIN;
+        return burn ? BURN_FORCE : TURN_FORCE;
     }
 }

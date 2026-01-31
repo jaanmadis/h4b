@@ -5,68 +5,75 @@ using UnityEngine.UI;
 
 public class LanderCameraCanvasController : MonoBehaviour
 {
+    [SerializeField] AudioSource stabilizingAudio;
+    [SerializeField] AudioSource targetAquiredAudio;
+    [SerializeField] AudioSource warningAudio;
     [SerializeField] CanvasGroup canvasGroup;
-    [SerializeField] Image asteroidIndicator;
+    [SerializeField] Image asteroidIndicatorImage;
+    [SerializeField] Image fadeImage;
     [SerializeField] CapsuleLandingController capsuleLandingController;
     [SerializeField] RectTransform canvasRect;
     [SerializeField] TextMeshProUGUI blinkingText;
     [SerializeField] TextMeshProUGUI buttonText;
+    [SerializeField] TextMeshProUGUI targetDistanceLabelText;
+    [SerializeField] TextMeshProUGUI targetDistanceText;
+    [SerializeField] TextMeshProUGUI targetVelocityLabelText;
+    [SerializeField] TextMeshProUGUI targetVelocityText;
     [SerializeField] TextMeshProUGUI distanceLabelText;
     [SerializeField] TextMeshProUGUI distanceText;
     [SerializeField] TextMeshProUGUI velocityLabelText;
     [SerializeField] TextMeshProUGUI velocityText;
-    [SerializeField] TextMeshProUGUI Engine1LabelText;
-    [SerializeField] TextMeshProUGUI Engine1Text;
-    [SerializeField] TextMeshProUGUI Engine2LabelText;
-    [SerializeField] TextMeshProUGUI Engine2Text;
-    [SerializeField] TextMeshProUGUI Engine3LabelText;
-    [SerializeField] TextMeshProUGUI Engine3Text;
-    [SerializeField] TextMeshProUGUI Engine4LabelText;
-    [SerializeField] TextMeshProUGUI Engine4Text;
+    [SerializeField] TextMeshProUGUI engine1LabelText;
+    [SerializeField] TextMeshProUGUI engine1Text;
+    [SerializeField] TextMeshProUGUI engine2LabelText;
+    [SerializeField] TextMeshProUGUI engine2Text;
+    [SerializeField] TextMeshProUGUI engine3LabelText;
+    [SerializeField] TextMeshProUGUI engine3Text;
+    [SerializeField] TextMeshProUGUI engine4LabelText;
+    [SerializeField] TextMeshProUGUI engine4Text;
 
-    private RectTransform AsteroidIndicatorRect => asteroidIndicator.rectTransform;
-
-    private Coroutine blinker;
+    private Coroutine blinkerCoroutine = null;
+    private bool targetAquiredAudioPlayed = false;
 
     private const float ASTEROID_TARGET_MARGIN = 30f;
+    private const float BLACKOUT_DELAY = 3f;
     private const float FADE_IN_DURATION = 3f;
-    private readonly Color asteroidIndicatorDefaultColor = new(1f, 0.5f, 0f, 1f);
-    private readonly Color asteroidIndicatorTargetColor = new(1f, 1f, 1f, 1f);
+    private const float FADE_OUT_DURATION = 1f;
+    private const string Engine1LabelText = "Starboard Engine [A]";
+    private const string Engine2LabelText = "Ventral Engine [S]";
+    private const string Engine3LabelText = "Port Engine [D]";
+    private const string Engine4LabelText = "Dorsal Engine [W]";
+    private const string EnginesLabelText = "All Engines [SPACE]";
+
+    // TODO: make camera more spacey -- radiation hits, sensor noise, extreme contrast etc
 
     private void Start()
     {
-        // TODO: Change text labels if wsad keys are re-mappable
-        asteroidIndicator.enabled = false;
+        canvasGroup.alpha = 0;
+        fadeImage.enabled = false;
+        asteroidIndicatorImage.enabled = false;
         blinkingText.enabled = false;
         buttonText.enabled = false;
-
-        //distanceLabelText.enabled = false;
-        //distanceText.enabled = false;
-        //velocityLabelText.enabled = false;
-        //velocityText.enabled = false;
-
-        //distanceLabelText.enabled = true;
-        //distanceText.enabled = true;
-        //velocityLabelText.enabled = true;
-        //velocityText.enabled = true;
-
+        targetDistanceLabelText.enabled = false;
+        targetDistanceText.enabled = false;
+        targetDistanceText.text = $"{Constants.LANDING_TARGET_DISTANCE:F3}";
+        targetVelocityLabelText.enabled = false;
+        targetVelocityText.enabled = false;
+        targetVelocityText.text = $"{Constants.LANDING_TARGET_VELOCITY:F3}";
+        engine1LabelText.text = Engine1LabelText;
+        engine2LabelText.text = Engine2LabelText;
+        engine3LabelText.text = Engine3LabelText;
+        engine4LabelText.text = Engine4LabelText;
         StartCoroutine(FadeIn());
     }
 
     void Update()
     {
-        if (asteroidIndicator.enabled)
+        if (capsuleLandingController.CapsuleLandingState == CapsuleLandingState.Coasting)
         {
             DrawAsteroidIndicator();
         }
-        if (distanceText.enabled)
-        {
-            distanceText.text = $"{capsuleLandingController.GetDistanceToAsteroid():F3}";
-        }
-        if (velocityText.enabled)
-        {
-            velocityText.text = $"{capsuleLandingController.CapsuleRigidbody.velocity.magnitude:F3}";
-        }
+        DrawDistanceAndVelocity();
     }
 
     public void SetCapsuleLandingState(CapsuleLandingState newCapsuleLandingState)
@@ -74,17 +81,16 @@ public class LanderCameraCanvasController : MonoBehaviour
         switch (newCapsuleLandingState)
         {
             case CapsuleLandingState.Coasting:
-                asteroidIndicator.color = asteroidIndicatorDefaultColor;
-                asteroidIndicator.enabled = true;
-                blinkingText.color = Color.yellow;
+                blinkingText.color = Color.red;
                 blinkingText.text = "ATTITUDE CONTROL REQUIRED";
-                blinker = StartCoroutine(Blink(blinkingText));
+                BlinkOn();
                 buttonText.text = "[CTRL]";
                 break;
             case CapsuleLandingState.Stabilizing:
-                asteroidIndicator.enabled = false;
-                StopCoroutine(blinker);
-                blinkingText.color = Color.green;
+                stabilizingAudio.Play();
+                asteroidIndicatorImage.enabled = false;
+                BlinkOff();
+                blinkingText.color = Color.cyan;
                 blinkingText.enabled = true;
                 blinkingText.text = "ATTITUDE CONTROL ACTIVE";
                 buttonText.enabled = false;
@@ -93,41 +99,96 @@ public class LanderCameraCanvasController : MonoBehaviour
                 blinkingText.enabled = false;
                 break;
             case CapsuleLandingState.PreBurn:
-                blinkingText.color = Color.yellow;
+                blinkingText.color = Color.red;
                 blinkingText.text = "INITIATE RETROGRADE BURN";
-                blinker = StartCoroutine(Blink(blinkingText));
+                BlinkOn();
                 buttonText.text = "[SPACE]";
                 buttonText.enabled = true;
-                Engine1LabelText.enabled = false;
-                Engine1Text.enabled = false;
-                Engine2LabelText.text = "All Engines [SPACE]";
-                Engine2Text.enabled = true;
-                Engine3LabelText.enabled = false;
-                Engine3Text.enabled = false;
-                Engine4LabelText.enabled = false;
-                Engine4Text.enabled = false;
+                engine1LabelText.enabled = false;
+                engine1Text.enabled = false;
+                engine2LabelText.text = EnginesLabelText;
+                engine2Text.enabled = true;
+                engine3LabelText.enabled = false;
+                engine3Text.enabled = false;
+                engine4LabelText.enabled = false;
+                engine4Text.enabled = false;
+                targetDistanceLabelText.enabled = true;
+                targetDistanceText.enabled = true;
+                targetVelocityLabelText.enabled = true;
+                targetVelocityText.enabled = true;
                 break;
             case CapsuleLandingState.RetrogradeBurn:
-                StopCoroutine(blinker);
-                blinkingText.enabled = false;
+                BlinkOff();
+                blinkingText.color = Color.red;
+                blinkingText.text = "INITIATE LANDING SEQUENCE";
                 buttonText.enabled = false;
+                buttonText.text = "[CTRL]";
+                break;
+            case CapsuleLandingState.Landing:
+                BlinkOff();
+                blinkingText.color = Color.cyan;
+                blinkingText.enabled = true;
+                blinkingText.text = "LANDING SEQUENCE ACTIVE";
+                buttonText.enabled = false;
+                engine1LabelText.enabled = true;
+                engine1Text.enabled = true;
+                engine2LabelText.text = Engine2LabelText;
+                engine2Text.enabled = true;
+                engine3LabelText.enabled = true;
+                engine3Text.enabled = true;
+                engine4LabelText.enabled = true;
+                engine4Text.enabled = true;
+                targetDistanceLabelText.enabled = false;
+                targetDistanceText.enabled = false;
+                targetVelocityLabelText.enabled = false;
+                targetVelocityText.enabled = false;
+                break;
+            case CapsuleLandingState.Landed:
+                blinkingText.enabled = false;
+                distanceLabelText.enabled = false;
+                distanceText.enabled = false;
+                velocityLabelText.enabled = false;
+                velocityText.enabled = false;
+                StartCoroutine(FadeOut());
                 break;
         }
     }
 
-    IEnumerator Blink(TextMeshProUGUI text)
+    private void BlinkOn()
+    {
+        if (blinkerCoroutine != null)
+        {
+            return;
+        }
+        blinkerCoroutine = StartCoroutine(Blink());
+        warningAudio.Play();
+    }
+
+    private IEnumerator Blink()
     {
         while (true)
         {
-            text.enabled = true;
+            blinkingText.enabled = true;
             yield return new WaitForSeconds(1.5f);
-            
-            text.enabled = false;
+
+            blinkingText.enabled = false;
             yield return new WaitForSeconds(0.5f);
         }
     }
 
-    IEnumerator FadeIn()
+    private void BlinkOff()
+    {
+        if (blinkerCoroutine == null)
+        {
+            return;
+        }
+        warningAudio.Stop();
+        StopCoroutine(blinkerCoroutine);
+        blinkerCoroutine = null;
+        blinkingText.enabled = false;
+    }
+
+    private IEnumerator FadeIn()
     {
         yield return new WaitForSeconds(Constants.PRE_COASTING_DELAY);
 
@@ -142,18 +203,35 @@ public class LanderCameraCanvasController : MonoBehaviour
         canvasGroup.alpha = 1f;
     }
 
+    private IEnumerator FadeOut()
+    {
+        yield return new WaitForSeconds(Constants.POST_LANDING_DELAY);
+
+        canvasGroup.alpha = 1f;
+        float t = FADE_OUT_DURATION;
+        while (t >= 0)
+        {
+            t -= Time.deltaTime;
+            canvasGroup.alpha = t / FADE_OUT_DURATION;
+            yield return null;
+        }
+        canvasGroup.alpha = 0f;
+
+        yield return new WaitForSeconds(BLACKOUT_DELAY);
+        fadeImage.enabled = true;
+    }
+
     private void DrawAsteroidIndicator()
     {
-        Vector3 screenPos = Camera.main.WorldToScreenPoint(Constants.ASTEROID_CENTER);
+        Vector3 screenPos = Camera.main.WorldToScreenPoint(Constants.ASTEROID_CENTER_LANDING);
         screenPos.z = Mathf.Sign(screenPos.z);
 
         if (screenPos.z <= 0f)
         {
-            AsteroidIndicatorRect.gameObject.SetActive(false);
+            asteroidIndicatorImage.enabled = false;
             return;
         }
-
-        AsteroidIndicatorRect.gameObject.SetActive(true);
+        asteroidIndicatorImage.enabled = true;
 
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
             canvasRect,
@@ -165,23 +243,66 @@ public class LanderCameraCanvasController : MonoBehaviour
         canvasPos.x = Mathf.Clamp(canvasPos.x, -canvasRect.sizeDelta.x / 2, canvasRect.sizeDelta.x / 2);
         canvasPos.y = Mathf.Clamp(canvasPos.y, -canvasRect.sizeDelta.y / 2, canvasRect.sizeDelta.y / 2);
 
-        AsteroidIndicatorRect.anchoredPosition = canvasPos;
+        RectTransform indicatorRect = asteroidIndicatorImage.rectTransform;
+        indicatorRect.anchoredPosition = canvasPos;
 
         bool targetAquired = 
-            Mathf.Abs(AsteroidIndicatorRect.anchoredPosition.x) < ASTEROID_TARGET_MARGIN && 
-            Mathf.Abs(AsteroidIndicatorRect.anchoredPosition.y) < ASTEROID_TARGET_MARGIN;
+            Mathf.Abs(indicatorRect.anchoredPosition.x) < ASTEROID_TARGET_MARGIN && 
+            Mathf.Abs(indicatorRect.anchoredPosition.y) < ASTEROID_TARGET_MARGIN;
 
         if (targetAquired)
         {
-            asteroidIndicator.color = asteroidIndicatorTargetColor;
+            if (!targetAquiredAudioPlayed)
+            {
+                targetAquiredAudio.Play();
+                targetAquiredAudioPlayed = true;
+            }
+            asteroidIndicatorImage.color = Color.cyan;
             buttonText.enabled = true;
             capsuleLandingController.CanStabilize = true;
         }
         else
         {
-            asteroidIndicator.color = asteroidIndicatorDefaultColor;
+            targetAquiredAudioPlayed = false;
+            asteroidIndicatorImage.color = Color.red;
             buttonText.enabled = false;
             capsuleLandingController.CanStabilize = false;
+        }
+    }
+
+    private void DrawDistanceAndVelocity()
+    {
+        float distance = capsuleLandingController.GetDistanceToAsteroid();
+        distanceText.text = $"{distance:F3}";
+
+        float velocity = capsuleLandingController.CapsuleRigidbody.velocity.magnitude;
+        velocityText.text = $"{velocity:F3}";
+        
+        if (capsuleLandingController.CapsuleLandingState == CapsuleLandingState.PreBurn || 
+            capsuleLandingController.CapsuleLandingState == CapsuleLandingState.RetrogradeBurn)
+        {
+            bool tooFar = distance > Constants.LANDING_TARGET_DISTANCE;
+            distanceText.color = tooFar ? Color.red : Color.green;
+
+            bool tooFast = velocity > Constants.LANDING_TARGET_VELOCITY;
+            velocityText.color = tooFast ? Color.red : Color.green;
+
+            if (capsuleLandingController.CapsuleLandingState == CapsuleLandingState.RetrogradeBurn)
+            {
+                bool canLand = !tooFar && !tooFast;
+                if (canLand)
+                {
+                    BlinkOn();
+                    buttonText.enabled = true;
+                    capsuleLandingController.CanLand = true;
+                }
+                else
+                {
+                    BlinkOff();
+                    buttonText.enabled = false;
+                    capsuleLandingController.CanLand = false;
+                }
+            }
         }
     }
 }

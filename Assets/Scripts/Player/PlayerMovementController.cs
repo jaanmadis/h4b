@@ -25,7 +25,7 @@ public class PlayerMovementController : MonoBehaviour
 
     void FixedUpdate()
     {
-        Vector3 up = (transform.position - Constants.ASTEROID_CENTER).normalized;
+        Vector3 up = (transform.position - Constants.ASTEROID_CENTER_X).normalized;
 
         // Add jump force
         if (jumpRequested)

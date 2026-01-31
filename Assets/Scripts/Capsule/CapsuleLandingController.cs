@@ -10,6 +10,8 @@ public enum CapsuleLandingState
     Stabilized,
     PreBurn,
     RetrogradeBurn,
+    Landing,
+    Landed
 }
 
 public class CapsuleLandingController : MonoBehaviour
@@ -22,16 +24,21 @@ public class CapsuleLandingController : MonoBehaviour
     [SerializeField] ThrusterController thruster3;
     [SerializeField] ThrusterController thruster4;
 
+    public bool CanLand { get; set; }
     public bool CanStabilize { get; set; }
+    public CapsuleLandingState CapsuleLandingState => capsuleLandingState;
+
     public Rigidbody CapsuleRigidbody => capsuleRigidbody;
 
-    private CapsuleLandingState capsuleLandingState = CapsuleLandingState.Initial;
+    private CapsuleLandingState capsuleLandingState = CapsuleLandingState.Landing; // Initial;
 
-    private const float COASTING_SPEED = 1000f;
+    private const float AUTOPILOT_DURATION = 5f;
+    private const float COASTING_SPEED = 1900f;
     private const float MAX_ANGULAR_VELOCITY = 0.3f;
     private const float RETROGRADE_BURN_DISTANCE = 30000f;
-    private const float STABILIZE_DURATION = 5f;
-    private const float THRUSTER_ONLINE_DELAY = 2f;
+    private const float THRUSTER_OFFLINE_DELAY = 2f;
+    private const float THRUSTER_READY_DELAY = 2f;
+    private const float THRUSTER_MIN_DISTANCE = 10f;
 
     void Start()
     {
@@ -42,19 +49,20 @@ public class CapsuleLandingController : MonoBehaviour
     {
         switch (capsuleLandingState)
         {
-            case CapsuleLandingState.PreCoasting:
-                StartCoroutine(StartCoasting());
-                break;
             case CapsuleLandingState.Coasting:
                 // TODO: Make these re-mappable and add arrow key support
-                HandleThruster(KeyCode.W, new ThrusterController[] { thruster4 }, false);
-                HandleThruster(KeyCode.S, new ThrusterController[] { thruster2 }, false);
-                HandleThruster(KeyCode.A, new ThrusterController[] { thruster1 }, false);
-                HandleThruster(KeyCode.D, new ThrusterController[] { thruster3 }, false);
+                HandleThrusterFlag(KeyCode.W, thruster4);
+                HandleThrusterFlag(KeyCode.S, thruster2);
+                HandleThrusterFlag(KeyCode.A, thruster1);
+                HandleThrusterFlag(KeyCode.D, thruster3);
                 if (Input.GetKeyDown(KeyCode.LeftControl) && CanStabilize)
                 {
                     SetCapsuleLandingState(CapsuleLandingState.Stabilizing);
-                    StartCoroutine(Stabilize());
+                    thruster1.Stop();
+                    thruster2.Stop();
+                    thruster3.Stop();
+                    thruster4.Stop();
+                    StartCoroutine(AutoStabilize());
                 }
                 break;
             case CapsuleLandingState.Stabilized:
@@ -70,31 +78,70 @@ public class CapsuleLandingController : MonoBehaviour
             case CapsuleLandingState.PreBurn:
                 if (Input.GetKeyDown(KeyCode.Space))
                 {
+                    HandleThrusterFlag(KeyCode.Space, thruster1);
+                    HandleThrusterFlag(KeyCode.Space, thruster2);
+                    HandleThrusterFlag(KeyCode.Space, thruster3);
+                    HandleThrusterFlag(KeyCode.Space, thruster4);
                     SetCapsuleLandingState(CapsuleLandingState.RetrogradeBurn);
                 }
                 break;
             case CapsuleLandingState.RetrogradeBurn:
-                HandleThruster(KeyCode.Space, new ThrusterController[] { thruster1, thruster2, thruster3, thruster4 }, true);
+                HandleThrusterFlag(KeyCode.Space, thruster1);
+                HandleThrusterFlag(KeyCode.Space, thruster2);
+                HandleThrusterFlag(KeyCode.Space, thruster3);
+                HandleThrusterFlag(KeyCode.Space, thruster4);
+                if (Input.GetKeyDown(KeyCode.LeftControl) && CanLand)
+                {
+                    SetCapsuleLandingState(CapsuleLandingState.Landing);
+                    thruster1.Stop();
+                    thruster2.Stop();
+                    thruster3.Stop();
+                    thruster4.Stop();
+                    StartCoroutine(AutoLand());
+                }
                 break;
         }
-        capsuleRigidbody.angularVelocity = Vector3.ClampMagnitude(capsuleRigidbody.angularVelocity, MAX_ANGULAR_VELOCITY);
     }
 
     void FixedUpdate()
     {
-        if (capsuleLandingState == CapsuleLandingState.RetrogradeBurn)
+        switch (capsuleLandingState)
         {
-            // Start adding gravity force towards asteroid center
-            Vector3 up = (transform.position - Constants.ASTEROID_CENTER).normalized;
-            Vector3 gravityDir = -up;
-            capsuleRigidbody.AddForce(gravityDir * Constants.GRAVITY_STRENGTH, ForceMode.Acceleration);
+            case CapsuleLandingState.PreCoasting:
+                Vector3 asteroidDir = (Constants.ASTEROID_CENTER_LANDING - transform.position).normalized;
+                capsuleRigidbody.AddForce(asteroidDir * COASTING_SPEED, ForceMode.VelocityChange);
+                SetCapsuleLandingState(CapsuleLandingState.Coasting);
+                break;
+            case CapsuleLandingState.Coasting:
+                HandleThrusterFire(thruster1, false);
+                HandleThrusterFire(thruster2, false);
+                HandleThrusterFire(thruster3, false);
+                HandleThrusterFire(thruster4, false);
+                capsuleRigidbody.angularVelocity = Vector3.ClampMagnitude(capsuleRigidbody.angularVelocity, MAX_ANGULAR_VELOCITY);
+                break;
+            case CapsuleLandingState.RetrogradeBurn:
+                Vector3 gravityDir = (Constants.ASTEROID_CENTER_LANDING - transform.position).normalized;
+                capsuleRigidbody.AddForce(gravityDir * Constants.GRAVITY_STRENGTH, ForceMode.Acceleration);
+                float dot = Vector3.Dot(capsuleRigidbody.velocity, gravityDir);
+                if (dot < 1)
+                {
+                    thruster1.Stop();
+                    thruster2.Stop();
+                    thruster3.Stop();
+                    thruster4.Stop();
+                }
+                HandleThrusterFire(thruster1, true);
+                HandleThrusterFire(thruster2, true);
+                HandleThrusterFire(thruster3, true);
+                HandleThrusterFire(thruster4, true);
+                break;
         }
     }
 
     public float GetDistanceToAsteroid()
     {
         float approxRadius = 200f;
-        float approxDistance = (Constants.ASTEROID_CENTER - transform.position).magnitude - approxRadius;
+        float approxDistance = (Constants.ASTEROID_CENTER_LANDING - transform.position).magnitude - approxRadius;
         if (approxDistance < 20000f)
         {
             Vector3 dir = (asteroid.transform.position - transform.position).normalized;
@@ -107,91 +154,92 @@ public class CapsuleLandingController : MonoBehaviour
         return approxDistance;
     }
 
-    private void HandleThruster(KeyCode key, ThrusterController[] thrusters, bool burn)
+    private void HandleThrusterFire(ThrusterController thruster, bool burn)
+    {
+        if (thruster.IsFlagged)
+        {
+            thruster.Fire(capsuleRigidbody, burn);
+        }
+        else
+        {
+            thruster.Stop();
+        }
+    }
+
+    private void HandleThrusterFlag(KeyCode key, ThrusterController thruster)
     {
         if (Input.GetKeyDown(key))
         {
-            foreach (var thruster in thrusters)
-            {
-                thruster.Fire(capsuleRigidbody, burn);
-            }
-        }
-        if (Input.GetKey(key))
-        {
-            foreach (var thruster in thrusters)
-            { 
-                thruster.Sustain(capsuleRigidbody, burn);
-            }
+            thruster.IsFlagged = true;
         }
         if (Input.GetKeyUp(key))
         {
-            foreach (var thruster in thrusters)
-            {
-                thruster.Stop();
-            }
+            thruster.IsFlagged = false;
         }
+    }
+
+    private IEnumerator StartCoroutineWithCallback(IEnumerator coroutine, System.Action onComplete)
+    {
+        yield return StartCoroutine(coroutine);
+        onComplete?.Invoke();
     }
 
     private IEnumerator StartPreCoasting()
     {
         yield return new WaitForSeconds(Constants.PRE_COASTING_DELAY);
         SetCapsuleLandingState(CapsuleLandingState.PreCoasting);
+        StartCoroutine(ThrustersReady());
     }
 
-    private IEnumerator StartCoasting()
+    private IEnumerator AutoLand()
     {
-        Vector3 up = (transform.position - Constants.ASTEROID_CENTER).normalized;
-        Vector3 asteroidDir = -up;
-        capsuleRigidbody.AddForce(asteroidDir * COASTING_SPEED, ForceMode.VelocityChange);
-        SetCapsuleLandingState(CapsuleLandingState.Coasting);
-
-        yield return new WaitForSeconds(THRUSTER_ONLINE_DELAY);
-        thruster3.Ready();
-
-        yield return new WaitForSeconds(THRUSTER_ONLINE_DELAY);
-        thruster1.Ready();
-
-        yield return new WaitForSeconds(THRUSTER_ONLINE_DELAY);
-        thruster4.Ready();
-
-        yield return new WaitForSeconds(THRUSTER_ONLINE_DELAY);
-        thruster2.Ready();
-    }
-
-    private IEnumerator Stabilize()
-    {
-        bool cosmeticDone = false;
+        bool cosmeticsDone = false;
         bool physicsDone = false;
 
-        StartCoroutine(StabilizeWrapper(StabilizeCosmetic(), () => cosmeticDone = true));
-        StartCoroutine(StabilizeWrapper(StabilizePhysics(), () => physicsDone = true));
+        StartCoroutine(StartCoroutineWithCallback(AutopilotCosmetics(), () => cosmeticsDone = true));
+        StartCoroutine(StartCoroutineWithCallback(LandPhysics(), () => physicsDone = true));
 
-        yield return new WaitUntil(() => cosmeticDone && physicsDone);
+        yield return new WaitUntil(() => cosmeticsDone && physicsDone);
+
+        StartCoroutine(ThrustersOffline());
+
+        SetCapsuleLandingState(CapsuleLandingState.Landed);
+    }
+
+    private IEnumerator AutoStabilize()
+    {
+        bool cosmeticsDone = false;
+        bool physicsDone = false;
+
+        StartCoroutine(StartCoroutineWithCallback(AutopilotCosmetics(), () => cosmeticsDone = true));
+        StartCoroutine(StartCoroutineWithCallback(StabilizePhysics(), () => physicsDone = true));
+
+        yield return new WaitUntil(() => cosmeticsDone && physicsDone);
 
         SetCapsuleLandingState(CapsuleLandingState.Stabilized);
     }
 
-    private IEnumerator StabilizeWrapper(IEnumerator coroutine, System.Action onComplete)
-    {
-        yield return StartCoroutine(coroutine);
-        onComplete?.Invoke();
-    }
-
-    private IEnumerator StabilizeCosmetic()
+    private IEnumerator AutopilotCosmetics()
     {
         ThrusterController[] thrusters = { thruster1, thruster2, thruster3, thruster4 };
-        
+
         float elapsed = 0f;
-        while (elapsed < STABILIZE_DURATION)
+        while (elapsed < AUTOPILOT_DURATION)
         {
+            if (GetDistanceToAsteroid() < THRUSTER_MIN_DISTANCE)
+            {
+                break;
+            }
+
             int rng = Random.Range(0, thrusters.Length);
             ThrusterController thruster = thrusters[rng];
             if (thruster.IsFiring)
             {
-                thruster.Stop();
+                thruster.Standby();
             }
             else
             {
+                thruster.Ready();
                 thruster.FireCosmetic(false);
             }
             elapsed += 0.1f;
@@ -200,15 +248,41 @@ public class CapsuleLandingController : MonoBehaviour
 
         foreach (var thruster in thrusters)
         {
-            thruster.Stop();
             thruster.Standby();
         }
+    }
+
+    private IEnumerator LandPhysics()
+    {
+        float startDistance = GetDistanceToAsteroid();
+        Vector3 direction = (Constants.ASTEROID_CENTER_LANDING - transform.position).normalized;
+
+        capsuleRigidbody.angularVelocity = Vector3.zero;
+        capsuleRigidbody.velocity = Vector3.zero;
+
+        float elapsed = 0f;
+        while (elapsed < AUTOPILOT_DURATION)
+        {
+            float t = elapsed / AUTOPILOT_DURATION;
+
+            float remainingDistance = Mathf.Lerp(startDistance, 0f, t);
+            float remainingTime = Mathf.Max(AUTOPILOT_DURATION - elapsed, 0.001f);
+            float targetSpeed = remainingDistance / remainingTime;
+
+            capsuleRigidbody.velocity = direction * targetSpeed;
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        capsuleRigidbody.angularVelocity = Vector3.zero;
+        capsuleRigidbody.velocity = Vector3.zero;
     }
 
     private IEnumerator StabilizePhysics()
     {
         // Set velocity toward asteroid center
-        Vector3 direction = -(transform.position - Constants.ASTEROID_CENTER).normalized;
+        Vector3 direction = (Constants.ASTEROID_CENTER_LANDING - transform.position).normalized;
         capsuleRigidbody.velocity = direction * capsuleRigidbody.velocity.magnitude;
 
         // Set initial values
@@ -216,9 +290,9 @@ public class CapsuleLandingController : MonoBehaviour
         Quaternion initialRotation = transform.rotation;
 
         float elapsed = 0f;
-        while (elapsed < STABILIZE_DURATION)
+        while (elapsed < AUTOPILOT_DURATION)
         {
-            float t = elapsed / STABILIZE_DURATION;
+            float t = elapsed / AUTOPILOT_DURATION;
 
             // Dampen angular velocity
             capsuleRigidbody.angularVelocity = Vector3.Lerp(initialAngularVelocity, Vector3.zero, t);
@@ -241,5 +315,35 @@ public class CapsuleLandingController : MonoBehaviour
     {
         capsuleLandingState = newCapsuleLandingState;
         landerCameraCanvasController.SetCapsuleLandingState(newCapsuleLandingState);
+    }
+
+    private IEnumerator ThrustersOffline()
+    {
+        yield return new WaitForSeconds(THRUSTER_OFFLINE_DELAY);
+        thruster3.Offline();
+
+        yield return new WaitForSeconds(THRUSTER_OFFLINE_DELAY);
+        thruster1.Offline();
+
+        yield return new WaitForSeconds(THRUSTER_OFFLINE_DELAY);
+        thruster4.Offline();
+
+        yield return new WaitForSeconds(THRUSTER_OFFLINE_DELAY);
+        thruster2.Offline();
+    }
+
+    private IEnumerator ThrustersReady()
+    {
+        yield return new WaitForSeconds(THRUSTER_READY_DELAY);
+        thruster3.Ready();
+
+        yield return new WaitForSeconds(THRUSTER_READY_DELAY);
+        thruster1.Ready();
+
+        yield return new WaitForSeconds(THRUSTER_READY_DELAY);
+        thruster4.Ready();
+
+        yield return new WaitForSeconds(THRUSTER_READY_DELAY);
+        thruster2.Ready();
     }
 }
