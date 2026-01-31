@@ -35,7 +35,7 @@ public class CapsuleLandingController : MonoBehaviour
     private const float AUTOPILOT_DURATION = 5f;
     private const float COASTING_SPEED = 1900f;
     private const float MAX_ANGULAR_VELOCITY = 0.3f;
-    private const float RETROGRADE_BURN_DISTANCE = 30000f;
+    private const float RETROGRADE_BURN_DISTANCE = 40000f;
     private const float THRUSTER_OFFLINE_DELAY = 2f;
     private const float THRUSTER_READY_DELAY = 2f;
     private const float THRUSTER_MIN_DISTANCE = 10f;
