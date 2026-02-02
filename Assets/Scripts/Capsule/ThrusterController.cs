@@ -1,20 +1,26 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
 
 public class ThrusterController : MonoBehaviour
 {
-    [SerializeField] AudioSource sound;
+    [SerializeField] AudioSource exhaustSound;
+    [SerializeField] AudioSource readySound;
+    [SerializeField] AudioSource standbySound;
+    [SerializeField] AudioSource offlineSound;
     [SerializeField] ParticleSystem exhaust;
     [SerializeField] TextMeshProUGUI text;
 
     public bool IsFiring => exhaust.emission.enabled;
     public bool IsFlagged { get; set; } = false;
 
-    private const float BURN_FORCE = 300f;
-    private const float TURN_FORCE = 100f;
-    private const float BURN_RATE_OVER_TIME = 115f;
-    private const float NORMAL_RATE_OVER_TIME = 15f;
     private bool isReady = false;
+    
+    private const float BURN_FORCE = 200f;
+    private const float BURN_RATE_OVER_TIME = 115f;
+    private const float HALT_DELAY = 1f;
+    private const float NORMAL_RATE_OVER_TIME = 15f;
+    private const float TURN_FORCE = 100f;
 
     private void Start()
     {
@@ -44,7 +50,7 @@ public class ThrusterController : MonoBehaviour
     {
         if (isReady && !IsFiring)
         {
-            sound.Play();
+            exhaustSound.Play();
             exhaust.Play();
             var emission = exhaust.emission;
             emission.enabled = true;
@@ -81,7 +87,7 @@ public class ThrusterController : MonoBehaviour
         IsFlagged = false;
         if (IsFiring)
         {
-            sound.Stop();
+            exhaustSound.Stop();
             var emission = exhaust.emission;
             emission.enabled = false;
             Ready();

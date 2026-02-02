@@ -2,7 +2,8 @@ using UnityEngine;
 
 public static class Constants
 {
-    public const float GRAVITY_STRENGTH = 10f;
+    public const float GRAVITY_STRENGTH_ASTEROID = 2f;
+    public const float GRAVITY_STRENGTH_LANDING = 1f;
     public const float LANDING_TARGET_DISTANCE = 100f;
     public const float LANDING_TARGET_VELOCITY = 10f;
     public const float PRE_COASTING_DELAY = 5f;

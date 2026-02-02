@@ -30,7 +30,7 @@ public class CapsuleLandingController : MonoBehaviour
 
     public Rigidbody CapsuleRigidbody => capsuleRigidbody;
 
-    private CapsuleLandingState capsuleLandingState = CapsuleLandingState.Landing; // Initial;
+    private CapsuleLandingState capsuleLandingState = CapsuleLandingState.Initial;
 
     private const float AUTOPILOT_DURATION = 5f;
     private const float COASTING_SPEED = 1900f;
@@ -121,7 +121,7 @@ public class CapsuleLandingController : MonoBehaviour
                 break;
             case CapsuleLandingState.RetrogradeBurn:
                 Vector3 gravityDir = (Constants.ASTEROID_CENTER_LANDING - transform.position).normalized;
-                capsuleRigidbody.AddForce(gravityDir * Constants.GRAVITY_STRENGTH, ForceMode.Acceleration);
+                capsuleRigidbody.AddForce(gravityDir * Constants.GRAVITY_STRENGTH_LANDING, ForceMode.Acceleration);
                 float dot = Vector3.Dot(capsuleRigidbody.velocity, gravityDir);
                 if (dot < 1)
                 {

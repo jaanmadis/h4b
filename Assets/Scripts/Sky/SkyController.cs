@@ -2,8 +2,6 @@ using UnityEngine;
 
 public class SkyController : MonoBehaviour
 {
-    [SerializeField] private Camera playerCamera;
-    [SerializeField] private Camera landerCamera;
     [SerializeField] private Transform sun;
     [SerializeField] private Transform sunLight;
 

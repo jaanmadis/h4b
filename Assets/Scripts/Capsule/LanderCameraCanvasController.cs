@@ -1,6 +1,7 @@
 using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class LanderCameraCanvasController : MonoBehaviour
@@ -219,6 +220,8 @@ public class LanderCameraCanvasController : MonoBehaviour
 
         yield return new WaitForSeconds(BLACKOUT_DELAY);
         fadeImage.enabled = true;
+
+        SceneManager.LoadScene("Asteroid");
     }
 
     private void DrawAsteroidIndicator()

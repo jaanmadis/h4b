@@ -6,8 +6,8 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/Space.unity
-    guid: 9fc0d4010bbf28b4594072e72b8655ab
+    path: Assets/Scenes/Asteroid.unity
+    guid: 2b87fd27d5049e748a73c8731dcef764
   - enabled: 1
     path: Assets/Scenes/TitleScreen.unity
     guid: 36275b731f8086a4ba67f66f691abf5e
@@ -17,4 +17,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Liftoff.unity
     guid: 34ea005c19516174f9deffb7cc0ce464
+  - enabled: 1
+    path: Assets/Scenes/Space.unity
+    guid: 9fc0d4010bbf28b4594072e72b8655ab
   m_configObjects: {}

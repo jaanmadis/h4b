@@ -6,8 +6,8 @@ public class PlayerMovementController : MonoBehaviour
     [SerializeField] Rigidbody rigidBody;
     
     //private readonly float STEP_SPEED = 100f;
-    private readonly float MOVE_ACCELERATION = 20f;
-    private readonly float JUMP_FORCE = 30f;
+    private readonly float MOVE_ACCELERATION = 10f;
+    private readonly float JUMP_FORCE = 3f;
     private readonly float UPRIGHT_SPEED = 5f;
 
     private bool jumpRequested = false;
@@ -36,7 +36,7 @@ public class PlayerMovementController : MonoBehaviour
 
         // Add gravity force towards asteroid center
         Vector3 gravityDir = -up;
-        rigidBody.AddForce(gravityDir * Constants.GRAVITY_STRENGTH, ForceMode.Acceleration);
+        rigidBody.AddForce(gravityDir * Constants.GRAVITY_STRENGTH_ASTEROID, ForceMode.Acceleration);
 
         // Add movement force            
         Vector3 forward = Vector3.ProjectOnPlane(transform.forward, up).normalized;
